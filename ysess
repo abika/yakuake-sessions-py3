@@ -9,11 +9,12 @@ import subprocess as sp
 import os
 import re
 from configparser import ConfigParser
-import math 
+import math
 import time
 import argparse
 
 DBUS = 'qdbus org.kde.yakuake '
+
 
 def get_stdout(cmd, **opts):
     opts.update({'stdout': sp.PIPE})
@@ -30,46 +31,52 @@ def get_stdout(cmd, **opts):
     proc = sp.Popen(cmd, **opts)
     return proc.communicate()[0].strip().decode("utf-8")
 
+
 def get_yakuake(cmd):
     return get_stdout(DBUS + cmd)
+
 
 def get_sessions():
     tabs = []
     sessnum = len(get_yakuake('/yakuake/sessions terminalIdList').split(','))
     activesess = int(get_yakuake('/yakuake/sessions activeSessionId'))
 
-    sessions = sorted(int(i) for i in get_yakuake('/yakuake/sessions sessionIdList').split(','))
-    ksessions = sorted(int(line.split('/')[-1]) for line in get_yakuake('').split('\n') if '/Sessions/' in line)
+    sessions = sorted(int(i) for i in get_yakuake(
+        '/yakuake/sessions sessionIdList').split(','))
+    ksessions = sorted(int(line.split(
+        '/')[-1]) for line in get_yakuake('').split('\n') if '/Sessions/' in line)
     session_map = dict(zip(sessions, ksessions))
 
     for i in range(sessnum):
         sessid = int(get_yakuake('/yakuake/tabs sessionAtTab %d' % i))
         ksess = '/Sessions/%d' % session_map[sessid]
-        pid = get_yakuake(ksess+' processId')
-        fgpid = get_yakuake(ksess+' foregroundProcessId')
+        pid = get_yakuake(ksess + ' processId')
+        fgpid = get_yakuake(ksess + ' foregroundProcessId')
         tabs.append({
             'title': get_yakuake('/yakuake/tabs tabTitle %d' % sessid),
             'sessionid': sessid,
             'active': sessid == activesess,
-            'cwd': get_stdout('pwdx '+pid).partition(' ')[2],
-            'cmd': '' if fgpid == pid else get_stdout('ps '+fgpid, env={'PS_FORMAT': 'command'}).split('\n')[-1],
+            'cwd': get_stdout('pwdx ' + pid).partition(' ')[2],
+            'cmd': '' if fgpid == pid else get_stdout('ps ' + fgpid, env={'PS_FORMAT': 'command'}).split('\n')[-1],
         })
     return tabs
 
-def write_sessions(tabs, outfile_str = None):
+
+def write_sessions(tabs, outfile_str=None):
     cp = ConfigParser()
     tabpad = int(math.log10(len(tabs))) + 1
     for i, tab in enumerate(tabs):
-        section = ('Tab %%0%dd' % tabpad) % (i+1)
+        section = ('Tab %%0%dd' % tabpad) % (i + 1)
         cp.add_section(section)
         cp.set(section, 'title', tab['title'])
         cp.set(section, 'active', '1' if tab['active'] else '0')
         cp.set(section, 'cwd', tab['cwd'])
         cp.set(section, 'cmd', tab['cmd'])
-    
+
     fp = open(outfile_str, 'w') if outfile_str else sys.stdout
     cp.write(fp)
     fp.close()
+
 
 def clear_sessions():
     for sid in get_yakuake('/yakuake/sessions sessionIdList').split(','):
@@ -77,7 +84,8 @@ def clear_sessions():
     time.sleep(2)
     return get_yakuake('/yakuake/sessions sessionIdList').split(',')[0]
 
-def load_sessions(file_ = sys.stdin):
+
+def load_sessions(file_=sys.stdin):
     cp = ConfigParser()
     cp.readfp(file_)
     sections = cp.sections()
@@ -93,18 +101,20 @@ def load_sessions(file_ = sys.stdin):
     for i, section in enumerate(sections):
         sessid = int(get_yakuake('/yakuake/sessions addSession'))
         opts = dict(cp.items(section))
-        
+
         get_yakuake('/yakuake/sessions raiseSession %d' % sessid)
-        get_yakuake('/yakuake/tabs setTabTitle %d "%s"' % (sessid, opts['title']))
+        get_yakuake('/yakuake/tabs setTabTitle %d "%s"' %
+                    (sessid, opts['title']))
         if 'cwd' in opts and opts['cwd']:
-            get_yakuake('/yakuake/sessions runCommand "cd \"%s\""' % opts['cwd'])
+            get_yakuake('/yakuake/sessions runCommand "cd \"%s\""' %
+                        opts['cwd'])
         if 'cmd' in opts and opts['cmd']:
             get_yakuake('/yakuake/sessions runCommand "%s"' % opts['cmd'])
         if 'active' in opts and opts['active'].lower() in ['y', 'yes', 'true', '1']:
             active = sessid
     if active:
         get_yakuake('/yakuake/sessions raiseSession %d' % active)
-    
+
     # Remove the session that remained after cleaning
     get_yakuake('/yakuake/sessions removeSession %s' % last_sid)
 
@@ -113,10 +123,14 @@ if __name__ == '__main__':
     # TODO: also store shell environment (for virtualenvs and such)
     # ps e 20017 | awk '{for (i=1; i<6; i++) $i = ""; print}'
 
-    ap = argparse.ArgumentParser(description="Save and load yakuake sessions.  Settings are exported in INI format.  Default action is to print the current setup to stdout in INI format.")
-    ap.add_argument('-i', '--in-file', dest='infile', help='File to read from, or "-" for stdin')
-    ap.add_argument('-o', '--out-file', dest='outfile', help='File to write to, or "-" for stdout')
-    ap.add_argument('--force-overwrite', dest='force_overwrite', help='Do not prompt for confirmation if out-file exists', action="store_true", default=False)
+    ap = argparse.ArgumentParser(
+        description="Save and load yakuake sessions.  Settings are exported in INI format.  Default action is to print the current setup to stdout in INI format.")
+    ap.add_argument(
+        '-i', '--in-file', dest='infile', help='File to read from, or "-" for stdin')
+    ap.add_argument(
+        '-o', '--out-file', dest='outfile', help='File to write to, or "-" for stdout')
+    ap.add_argument('--force-overwrite', dest='force_overwrite',
+                    help='Do not prompt for confirmation if out-file exists', action="store_true", default=False)
     args = ap.parse_args()
 
     if (args.outfile is None and args.infile is None) or args.outfile == '-':
@@ -128,6 +142,7 @@ if __name__ == '__main__':
         if args.infile == '-':
             load_sessions()
         elif not os.path.exists(args.infile):
-            sys.stderr.write("ERROR: Input file (%s) does not exist.\n" % args.infile)
+            sys.stderr.write(
+                "ERROR: Input file (%s) does not exist.\n" % args.infile)
             sys.exit(1)
         load_sessions(open(args.infile))
