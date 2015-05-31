@@ -62,7 +62,7 @@ def get_sessions():
     return tabs
 
 
-def write_sessions(tabs, outfile_str=None):
+def write_sessions(tabs, outfile_str=None, with_cmd=True):
     cp = ConfigParser()
     tabpad = int(math.log10(len(tabs))) + 1
     for i, tab in enumerate(tabs):
@@ -71,7 +71,8 @@ def write_sessions(tabs, outfile_str=None):
         cp.set(section, 'title', tab['title'])
         cp.set(section, 'active', '1' if tab['active'] else '0')
         cp.set(section, 'cwd', tab['cwd'])
-        cp.set(section, 'cmd', tab['cmd'])
+        if (with_cmd):
+            cp.set(section, 'cmd', tab['cmd'])
 
     fp = open(outfile_str, 'w') if outfile_str else sys.stdout
     cp.write(fp)
@@ -129,6 +130,8 @@ def arguments():
         '-o', '--out-file', dest='outfile', help='File to write to, or "-" for stdout')
     ap.add_argument('--force-overwrite', dest='force_overwrite',
                     help='Do not prompt for confirmation if out-file exists', action="store_true", default=False)
+    ap.add_argument('--cmd', dest='with_cmd', help='Include currently running command in session file',
+                    action="store_true", default=False)
     return ap.parse_args()
 
 
@@ -136,11 +139,11 @@ def main(argv=sys.argv):
     args = arguments()
 
     if (args.outfile is None and args.infile is None) or args.outfile == '-':
-        write_sessions(get_sessions())
+        write_sessions(get_sessions(), with_cmd=args.with_cmd)
     elif args.outfile:
         if not os.path.exists(args.outfile) or args.force_overwrite or \
                 input('Specified file exists, overwrite? [y/N] ').lower().startswith('y'):
-            write_sessions(get_sessions(), args.outfile)
+            write_sessions(get_sessions(), args.outfile, with_cmd=args.with_cmd)
     elif args.infile:
         if args.infile == '-':
             load_sessions()
