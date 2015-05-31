@@ -119,24 +119,27 @@ def load_sessions(file_=sys.stdin):
     get_yakuake('/yakuake/sessions removeSession %s' % last_sid)
 
 
-if __name__ == '__main__':
-    # TODO: also store shell environment (for virtualenvs and such)
-    # ps e 20017 | awk '{for (i=1; i<6; i++) $i = ""; print}'
-
+def arguments():
     ap = argparse.ArgumentParser(
-        description="Save and load yakuake sessions.  Settings are exported in INI format.  Default action is to print the current setup to stdout in INI format.")
+        description="Save and load yakuake sessions.  Settings are exported in INI format. "
+        " Default action is to print the current setup to stdout in INI format.")
     ap.add_argument(
         '-i', '--in-file', dest='infile', help='File to read from, or "-" for stdin')
     ap.add_argument(
         '-o', '--out-file', dest='outfile', help='File to write to, or "-" for stdout')
     ap.add_argument('--force-overwrite', dest='force_overwrite',
                     help='Do not prompt for confirmation if out-file exists', action="store_true", default=False)
-    args = ap.parse_args()
+    return ap.parse_args()
+
+
+def main(argv=sys.argv):
+    args = arguments()
 
     if (args.outfile is None and args.infile is None) or args.outfile == '-':
         write_sessions(get_sessions())
     elif args.outfile:
-        if not os.path.exists(args.outfile) or args.force_overwrite or input('Specified file exists, overwrite? [y/N] ').lower().startswith('y'):
+        if not os.path.exists(args.outfile) or args.force_overwrite or \
+                input('Specified file exists, overwrite? [y/N] ').lower().startswith('y'):
             write_sessions(get_sessions(), args.outfile)
     elif args.infile:
         if args.infile == '-':
@@ -146,3 +149,6 @@ if __name__ == '__main__':
                 "ERROR: Input file (%s) does not exist.\n" % args.infile)
             sys.exit(1)
         load_sessions(open(args.infile))
+
+if __name__ == "__main__":
+    sys.exit(main())
