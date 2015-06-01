@@ -86,9 +86,12 @@ def clear_sessions():
     return get_yakuake('/yakuake/sessions sessionIdList').split(',')[0]
 
 
-def load_sessions(file_=sys.stdin):
+def load_sessions(filenames=None):
     cp = ConfigParser()
-    cp.readfp(file_)
+    if (filenames):
+        cp.read(filenames)
+    else:
+        cp.readfp(sys.stdin)
     sections = cp.sections()
     if not sections:
         sys.stderr.write("No tab info found, aborting\n")
@@ -125,7 +128,7 @@ def arguments():
         description="Save and load yakuake sessions.  Settings are exported in INI format. "
         " Default action is to print the current setup to stdout in INI format.")
     ap.add_argument(
-        '-i', '--in-file', dest='infile', help='File to read from, or "-" for stdin')
+        '-i', '--in-files', dest='infiles', help='File(s) to read from, or "-" for stdin', nargs='+')
     ap.add_argument(
         '-o', '--out-file', dest='outfile', help='File to write to, or "-" for stdout')
     ap.add_argument('--force-overwrite', dest='force_overwrite',
@@ -138,20 +141,22 @@ def arguments():
 def main(argv=sys.argv):
     args = arguments()
 
-    if (args.outfile is None and args.infile is None) or args.outfile == '-':
+    if (args.outfile is None and args.infiles is None) or args.outfile == '-':
         write_sessions(get_sessions(), with_cmd=args.with_cmd)
     elif args.outfile:
         if not os.path.exists(args.outfile) or args.force_overwrite or \
                 input('Specified file exists, overwrite? [y/N] ').lower().startswith('y'):
-            write_sessions(get_sessions(), args.outfile, with_cmd=args.with_cmd)
-    elif args.infile:
-        if args.infile == '-':
+            write_sessions(
+                get_sessions(), args.outfile, with_cmd=args.with_cmd)
+    elif args.infiles:
+        if args.infiles == ['-']:
             load_sessions()
-        elif not os.path.exists(args.infile):
-            sys.stderr.write(
-                "ERROR: Input file (%s) does not exist.\n" % args.infile)
-            sys.exit(1)
-        load_sessions(open(args.infile))
+        else:
+            for fn in args.infiles:
+                if not os.path.exists(fn):
+                    sys.stderr.write(
+                        "WARNING: Input file (%s) does not exist.\n" % fn)
+            load_sessions(args.infiles)
 
 if __name__ == "__main__":
     sys.exit(main())
