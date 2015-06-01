@@ -141,13 +141,13 @@ def arguments():
 def main(argv=sys.argv):
     args = arguments()
 
-    if (args.outfile is None and args.infiles is None) or args.outfile == '-':
-        write_sessions(get_sessions(), with_cmd=args.with_cmd)
-    elif args.outfile:
-        if not os.path.exists(args.outfile) or args.force_overwrite or \
-                input('Specified file exists, overwrite? [y/N] ').lower().startswith('y'):
-            write_sessions(
-                get_sessions(), args.outfile, with_cmd=args.with_cmd)
+    if args.outfile is not None or (args.outfile is None and args.infiles is None):
+        outfile = args.outfile if args.outfile != '-' else None
+        if outfile is not None and os.path.exists(outfile):
+            if not args.force_overwrite and not input('Specified file exists, overwrite? [y/N] ').lower().startswith('y'):
+                return
+        write_sessions(
+            get_sessions(), outfile, with_cmd=args.with_cmd)
     elif args.infiles:
         if args.infiles == ['-']:
             load_sessions()
