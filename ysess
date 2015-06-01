@@ -1,9 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
-if sys.version_info < (3, 0):
-    sys.write.stderr("Python 3 required\n")
-    sys.exit(1)
 
 import subprocess as sp
 import os
