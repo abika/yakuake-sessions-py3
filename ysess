@@ -139,6 +139,10 @@ def arguments():
 def main(argv=sys.argv):
     args = arguments()
 
+    if not get_yakuake(""):
+        sys.stderr.write("WARNING: Could not connect to yakuake via qdbus. Is Yakuake running?\n")
+        return
+
     if args.outfile is not None or (args.outfile is None and args.infiles is None):
         outfile = args.outfile if args.outfile != '-' else None
         if outfile is not None and os.path.exists(outfile):
