@@ -87,7 +87,7 @@ def load_sessions(filenames=None):
     if filenames:
         cp.read(filenames)
     else:
-        cp.readfp(sys.stdin)
+        cp.read_file(sys.stdin)
     sections = cp.sections()
     if not sections:
         sys.stderr.write("No tab info found, aborting\n")
