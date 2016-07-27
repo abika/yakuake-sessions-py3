@@ -34,28 +34,29 @@ def get_yakuake(cmd):
 
 
 def get_sessions():
+    active_session_id = int(get_yakuake('/yakuake/sessions activeSessionId'))
+
     tabs = []
-    sessnum = len(get_yakuake('/yakuake/sessions terminalIdList').split(','))
-    activesess = int(get_yakuake('/yakuake/sessions activeSessionId'))
-
-    sessions = sorted(int(i) for i in get_yakuake(
-        '/yakuake/sessions sessionIdList').split(','))
-    ksessions = sorted(int(line.split(
-        '/')[-1]) for line in get_yakuake('').split('\n') if '/Sessions/' in line)
-    session_map = dict(zip(sessions, ksessions))
-
-    for i in range(sessnum):
-        sessid = int(get_yakuake('/yakuake/tabs sessionAtTab %d' % i))
-        ksess = '/Sessions/%d' % session_map[sessid]
-        pid = get_yakuake(ksess + ' processId')
-        fgpid = get_yakuake(ksess + ' foregroundProcessId')
+    while True:
+        session_id = int(get_yakuake('/yakuake/tabs sessionAtTab %d' % len(tabs)))
+        if session_id < 0:
+            break  # end reached
+        # NOTE: one session can have multiple terminal sessions (split screen),
+        # ignoring all but first one
+        terminal_id = int(get_yakuake('/yakuake/sessions terminalIdsForSessionId %d' % session_id)
+                          .split(',')[0])
+        terminal_session = '/Sessions/%d' % (terminal_id + 1)
+        pid = get_yakuake(terminal_session + ' processId')
+        fgpid = get_yakuake(terminal_session + ' foregroundProcessId')
         tabs.append({
-            'title': get_yakuake('/yakuake/tabs tabTitle %d' % sessid),
-            'sessionid': sessid,
-            'active': sessid == activesess,
+            'title': get_yakuake('/yakuake/tabs tabTitle %d' % session_id),
+            'sessionid': session_id,
+            'active': session_id == active_session_id,
             'cwd': get_stdout('pwdx ' + pid).partition(' ')[2],
-            'cmd': '' if fgpid == pid else get_stdout('ps ' + fgpid, env={'PS_FORMAT': 'command'}).split('\n')[-1],
+            'cmd': '' if fgpid == pid else
+            get_stdout('ps ' + fgpid, env={'PS_FORMAT': 'command'}).split('\n')[-1],
         })
+
     return tabs
 
 
